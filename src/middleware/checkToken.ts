@@ -5,6 +5,8 @@ import getRoleProperties from "../utils/getRoleProperties";
 
 export default async function(req:FastifyRequest<{ Body: BaseReqI }>, rep:FastifyReply, done:Function){
     try {
+        console.log(req.body);
+        
         if(req.body.auth.requesting == 'client'){
             const userData = req.body.auth
             const user = await User.findOne({
@@ -34,7 +36,7 @@ export default async function(req:FastifyRequest<{ Body: BaseReqI }>, rep:Fastif
                             }
                         } else {
                             req.log.info(`[ST-Auth] User ${userData.id} token lifecircle is over`);
-                            return rep.code(404).send({statusCode: 404, message: 'Token lifecircle is over'});
+                            return rep.code(404).send({ statusCode: 404, message: 'Token lifecircle is over' });
                         }
                     } else {
                         req.log.info(`[ST-Auth] User ${userData.id} token is not valid`);

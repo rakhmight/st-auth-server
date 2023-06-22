@@ -21,7 +21,7 @@ export default async function (user:UserI, password: string):Promise<RefreshUser
         return {
             error: { value: false },
             data: {
-                userData:{ bio: user.bio, userRole: user.userRole },
+                userData:{ bio: user.bio, userRole: user.userRole, permission: user.permission },
                 authData: { id: user._id, token: { key: newToken, date } }
             }
         }

@@ -10,7 +10,8 @@ export interface AddUserReqI extends BaseReqI {
         },
         userRole: String,
         permission: Number,
-        roleProperties: UserRolePropertiesI
+        roleProperties: UserRolePropertiesI,
+        createSign: Boolean
     }
 }
 
@@ -42,7 +43,8 @@ export interface UserFromStore {
     status: UserStatusI,
     userRole: String,
     roleProperties: UserRolePropertiesI,
-    permission: Number
+    permission: Number,
+    hasSign: Boolean
 }
 
 export interface SigninReqI {
@@ -55,7 +57,12 @@ export interface SigninReqI {
 export interface AuthReqI {
     auth:{
         id: string,
-        password: string
+        password: string,
+        requesting: string
+    },
+    deviceData?:{
+        id: string,
+        code: string
     }
 }
 
@@ -63,8 +70,9 @@ export interface PwdCompareReqI {
     auth:{
         id: string,
         token: string,
-        password: string,
-        requesting: string
+        requesting: string,
+        checkedID: string,
+        password: string
     }
 }
 
@@ -76,7 +84,8 @@ export interface RefreshUserTokenOutputI {
     data?:{
         userData: {
             bio: UserBioI,
-            userRole: String
+            userRole: String,
+            permission: Number
         },
         authData: {
             id: String,

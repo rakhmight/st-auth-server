@@ -3,5 +3,9 @@ export interface BaseReqI {
         id: String,
         token: String,
         requesting: string
+    },
+    deviceData?:{
+        id: string,
+        code: string
     }
 }

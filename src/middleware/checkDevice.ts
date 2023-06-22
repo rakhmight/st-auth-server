@@ -1,12 +1,13 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { GetUserReqI, GetUsersReqI } from "../routes/@types/user";
+import { AuthReqI, GetUserReqI, GetUsersReqI } from "../routes/@types/user";
 import { Device } from "../models/device";
+import { BaseReqI } from "../routes/@types/general";
 
-export default async function(req:FastifyRequest<{Body: GetUsersReqI | GetUserReqI}>, rep:FastifyReply, done:Function){
+export default async function(req:FastifyRequest<{Body: BaseReqI | AuthReqI}>, rep:FastifyReply, done:Function){
 
     try {
-        if(req.body.auth.requesting == 'device'){
-            const deviceData = req.body.data.device
+        if(req.body.auth.requesting == 'device' && req.body.deviceData){
+            const deviceData = req.body.deviceData
 
             if(deviceData){
                 const device = await Device.findById(deviceData.id)

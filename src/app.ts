@@ -6,7 +6,6 @@ const fastify = require("fastify");
 // routes
 const pingRoutes = require('./routes/ping')
 const userRoutes = require('./routes/user')
-const avatarRoutes = require('./routes/avatar')
 const deviceRoutes = require('./routes/device')
 
 // plugins
@@ -21,10 +20,13 @@ export const build = (opts = {}) => {
 
     app.register(require('@fastify/cors'), corsParams)
     app.register(dbPlugin, { url: dbUrl })
+    app.register(require('@fastify/static'), {
+      root: path.join(__dirname, 'storage'),
+      prefix: '/public/',
+    })
 
     app.register(pingRoutes)
     app.register(userRoutes)
-    app.register(avatarRoutes)
     app.register(deviceRoutes)
 
     app.after()

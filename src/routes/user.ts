@@ -16,6 +16,7 @@ import checkDevice from '../middleware/checkDevice';
 import { BaseReqI } from './@types/general';
 import checkIsAdmin from '../middleware/checkIsAdmin';
 import { Teacher } from '../models/teacher';
+import makeReq from '../utils/makeReq';
 
 // Declaration merging
 declare module 'fastify' {
@@ -58,7 +59,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
         }
     })
     
-    fastify.post<{Body: AuthReqI}>('/api/user/auth', async (req, rep) => { // for signin by id & password
+    fastify.post<{Body: AuthReqI}>('/api/user/auth', {preHandler: [checkDevice]}, async (req, rep) => { // for signin by id & password
         try {
             const userData = req.body.auth
 
@@ -86,9 +87,13 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
         }
     })
     
-    fastify.post<{Body: BaseReqI}>('/api/user/check', {preHandler: [checkToken]}, async (req, rep) => { // for checking auth state & permission
+    fastify.post<{Body: BaseReqI}>('/api/user/check', {preHandler: [checkToken, checkDevice]}, async (req, rep) => { // for checking auth state & permission
         try {
-            req.log.info(`[ST-Auth] User with id ${req.body.auth.id} (${req.user.userData.bio.lastName} ${req.user.userData.bio.firstName}) successefully authorized`)
+            if(!req.body.deviceData){
+                req.log.info(`[ST-Auth] User with id ${req.body.auth.id} (${req.user.userData.bio.lastName} ${req.user.userData.bio.firstName}) successefully authorized`)
+            } else {
+                req.log.info(`[ST-Auth] Device with id ${req.body.deviceData.id} successefully identified`)
+            }
             return rep.code(200).send({statusCode: 200, data:{ ...req.user }})
         } catch (error) {
             req.log.error(error);
@@ -116,16 +121,16 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
     fastify.post<{Body: PwdCompareReqI}>('/api/user/validate', {preHandler: [ checkToken ]}, async (req, rep) => {  // for password comparison
         try {
             const userData = req.body.auth
-            const user = await User.findById(userData.id)
+            const user = await User.findById(userData.checkedID)
             
             if(user){
                 const isPasswordValid = await user.comparePasswords(user.auth.password!, userData.password)
 
                 if(isPasswordValid){
-                    req.log.info(`[ST-Auth] User ${userData.id} (${user.bio.lastName} ${user.bio.firstName}) password is valid`)
+                    req.log.info(`[ST-Auth] User ${userData.checkedID} (${user.bio.lastName} ${user.bio.firstName}) password is valid`)
                     return rep.code(200).send({statusCode: 200, data:{ ok: true, user: { ...req.user } }})
                 } else {
-                    req.log.info(`[ST-Auth] User ${userData.id} (${user.bio.lastName} ${user.bio.firstName}) password is invalid`)
+                    req.log.info(`[ST-Auth] User ${userData.checkedID} (${user.bio.lastName} ${user.bio.firstName}) password is invalid`)
                     return rep.code(403).send({statusCode: 403, message: 'Password is invalid'})
                 }
             }
@@ -147,7 +152,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
             
             if (checkExist) {
                 req.log.info(`[ST-Auth] User with login ${userData.auth.login} already exists`);
-                return rep.code(409).send({statusCode: 409, msg: 'User with given login already exists.'})
+                return rep.code(409).send({statusCode: 409, msg: 'User with given login already exists'})
             }else {
     
                 const newUser = await User.create({
@@ -162,7 +167,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                     },
                     userRole: userData.userRole,
                     permission: userData.permission,
-                    hasSign: false,
+                    hasSign: userData.createSign,
                     status: {
                       blocked:{
                         state: false,
@@ -176,12 +181,29 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                     
                     try {
                         fs.writeFile(path.join(__dirname, '..', 'storage', 'avatars', `${newUser._id}.png`), base64Data, 'base64', function(err) {
-                        if(err) throw err
+                            if(err) throw err
                         });
                     } catch (error) {
-                        console.log(`[Auth-api] Failed to write user to local storage: ${error}`)
+                        console.log(`[Auth-api] Failed to write user avatar to local storage: ${error}`)
+                    }
+                } else {
+                    try {
+                        fs.copyFile(path.join(__dirname, '..', 'storage', 'avatars', 'default', `default_avatar.png`), path.join(__dirname, '..', 'storage', 'avatars', `${newUser._id}.png`), function(err) {
+                            if(err) throw err
+                        });
+                    } catch (error) {
+                        console.log(`[Auth-api] Failed to write user avatar to local storage: ${error}`)
                     }
                 }
+                const sign = userData.createSign ? await makeReq(`${process.env.ST_ADMIN_SERVER_IP}/api/signs/create`, "POST", {
+                    auth: {
+                        id: req.body.auth.id,
+                        token: req.body.auth.token
+                    },
+                    data: {
+                        _id: newUser._id
+                    }
+                }) : false
                 
                 await choiseRole(newUser._id, newUser.userRole, userData.roleProperties)
     
@@ -191,7 +213,8 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                     status: newUser.status,
                     userRole: newUser.userRole,
                     roleProperties: userData.roleProperties,
-                    permission: newUser.permission
+                    permission: newUser.permission,
+                    hasSign: newUser.hasSign
                 }
                 let usersStore:Array<UserFromStore> = []
     
@@ -222,7 +245,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                 }
 
                 req.log.info(`[Auth-api] New user added. Login: ${newUser.auth.login}`)
-                return rep.code(200).send({statusCode: 200, data:{ userToStore }})
+                return rep.code(200).send({statusCode: 200, data:{ user: userToStore, sign }})
             }
             
 
@@ -247,7 +270,11 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
         try {
             const usersList = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'storage', 'users', 'users.json'),{encoding:'utf8', flag:'r'}))
             
-            req.log.info(`[ST-Auth] User ${req.body.auth.id} get users list`)
+            if(req.body.auth.requesting=='client'){
+                req.log.info(`[ST-Auth] User ${req.body.auth.id} get users list`)
+            } else if(req.body.auth.requesting=='device'){
+                req.log.info(`[ST-Auth] Device ${req.body.data.device?.id} get users list`)
+            }
             return rep.code(200).send({statusCode: 200, data: { usersList }})
         } catch (error) {
           req.log.error(error);
