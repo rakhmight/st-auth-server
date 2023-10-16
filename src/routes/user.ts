@@ -6,7 +6,7 @@ import {
 import fp from 'fastify-plugin';
 import { Db } from '../plugins/db';
 import checkToken from '../middleware/checkToken';
-import { AddUserReqI, AuthReqI, CheckedUserCtxI, FindUsersByDepReqI, GetUserReqI, GetUsersReqI, PwdCompareReqI, RefreshUserTokenOutputI, SigninReqI, UserFromStore } from './@types/user';
+import { AddUserDataI, AddUserReqI, AddUsersReqI, AuthReqI, CheckedUserCtxI, FindUsersByDepReqI, GetUserReqI, GetUsersReqI, PwdCompareReqI, RefreshUserTokenOutputI, SigninReqI, UserFromStore } from './@types/user';
 import { User } from '../models/user'
 import fs from 'fs'
 import path from 'path'
@@ -17,6 +17,9 @@ import { BaseReqI } from './@types/general';
 import checkIsAdmin from '../middleware/checkIsAdmin';
 import { Teacher } from '../models/teacher';
 import makeReq from '../utils/makeReq';
+import prepareUser from '../services/prepareUser';
+import afs from 'fs/promises'
+import { request } from 'http';
 
 // Declaration merging
 declare module 'fastify' {
@@ -144,7 +147,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
     fastify.post<{Body: AddUserReqI}>('/api/user/add', {preHandler: [checkToken, checkIsAdmin]}, async (req, rep) => {
         try {
 
-            const userData = req.body.data
+            const userData:AddUserDataI = req.body.data
     
             const checkExist = await User.findOne({
                 'auth.login': userData.auth.login
@@ -195,7 +198,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                         console.log(`[Auth-api] Failed to write user avatar to local storage: ${error}`)
                     }
                 }
-                const sign = userData.createSign ? await makeReq(`${process.env.ST_ADMIN_SERVER_IP}/api/signs/create`, "POST", {
+                const sign:Boolean | Object = userData.createSign ? await makeReq(`${process.env.ST_ADMIN_SERVER_IP}/api/signs/create`, "POST", {
                     auth: {
                         id: req.body.auth.id,
                         token: req.body.auth.token
@@ -256,8 +259,35 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
     })
 
     //! ======================================== !
-    fastify.post<{Body: AddUserReqI}>('/api/user/multipleadd', {preHandler: [checkToken, checkIsAdmin]}, async (req, rep) => {
+    fastify.post<{Body: AddUsersReqI}>('/api/user/multipleadd', {preHandler: [checkToken, checkIsAdmin]}, async (req, rep) => {
         try {
+
+            const usersList = req.body.data.users
+
+
+            const usersToStore:Array<UserFromStore> = await Promise.all(
+                usersList.map(async user=>{
+                const { preparedUser } = await prepareUser(user, { id: req.body.auth.id, token: req.body.auth.token})
+
+                return preparedUser
+            }))
+
+            const usersFile = await afs.readFile(path.join(__dirname, '..', 'storage', 'users', 'users.json'))
+            .catch(error => { throw error })
+
+            const usersFromStoreArray = []
+            if (usersFile) {
+                let usersFromStore:Array<UserFromStore> = JSON.parse(usersFile.toString())
+                usersFromStoreArray.push(...usersFromStore, ...usersToStore)
+            } else {
+                usersFromStoreArray.push(...usersToStore)
+            }
+
+            const writeNewUsers = await afs.writeFile(path.join(__dirname, '..', 'storage', 'users', 'users.json'), JSON.stringify(usersFromStoreArray))
+            .catch(error => { throw error })            
+            
+            req.log.info(`[Auth-api] Multiple users adding`)
+            return rep.code(200).send({statusCode: 200, data:{ users: usersToStore, writeNewUsers }})
 
         } catch (error) {
           req.log.error(error);

@@ -3,7 +3,7 @@ import { Schema, Document, model, Model } from 'mongoose'
 export interface EnrolleeModel extends Model<EnrolleeI> {
 }
 
-interface EnrolleeI extends Document{
+export interface EnrolleeI extends Document{
     _id: String,
     group: Number,
     formOfEducation: String,

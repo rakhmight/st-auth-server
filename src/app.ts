@@ -13,7 +13,7 @@ const { dbPlugin } = require('./plugins/db')
 const { corsParams } = require('./plugins/cors')
 
 // options
-const dbUrl = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@localhost:27017/${process.env.DB_NAME}`
+const dbUrl = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@127.0.0.1:27017/${process.env.DB_NAME}`
 
 export const build = (opts = {}) => {
     const app = fastify(opts)

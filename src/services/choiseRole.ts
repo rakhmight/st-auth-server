@@ -1,10 +1,10 @@
 import { Student } from "../models/student";
-import { Enrollee } from "../models/enrollee";
+import { Enrollee, EnrolleeI } from "../models/enrollee";
 import { Teacher } from "../models/teacher";
 import { Employee } from "../models/employee";
 import { UserRolePropertiesI } from "../routes/@types/user";
 
-export default async function (id:String, role:String, properties:UserRolePropertiesI):Promise<void>{
+export default async function (id:String, role:String, properties:UserRolePropertiesI):Promise<void | EnrolleeI >{
     if(role=='student'){
         await Student.create({
             _id: id,
@@ -19,7 +19,7 @@ export default async function (id:String, role:String, properties:UserRoleProper
             console.log(`[Auth-api] Error while adding student: ${err}`);
         })
     }else if(role=='enrollee'){
-        await Enrollee.create({
+        const enrollee = await Enrollee.create({
             _id: id,
             group: properties.group,
             formOfEducation: properties.formOfEducation,
@@ -31,6 +31,8 @@ export default async function (id:String, role:String, properties:UserRoleProper
         .catch(err=>{
             console.log(`[Auth-api] Error while adding enrollee: ${err}`);
         })
+
+        return enrollee
     }else if(role=='teacher'){
         await Teacher.create({
             _id: id,

@@ -2,7 +2,10 @@ import { UserStatusI } from "../../models/@types/user"
 import { BaseReqI } from "./general"
 
 export interface AddUserReqI extends BaseReqI {
-    data: {
+    data: AddUserDataI
+}
+
+export interface AddUserDataI {
         bio: UserBioI,
         auth: {
             password: String,
@@ -12,7 +15,25 @@ export interface AddUserReqI extends BaseReqI {
         permission: Number,
         roleProperties: UserRolePropertiesI,
         createSign: Boolean
+}
+
+export interface AddUsersReqI extends BaseReqI{
+    data: {
+        users: Array<UsersListI>
     }
+}
+
+interface UsersListI {
+    Role: 'student' | 'enrollee' | 'teacher' | 'employee',
+    FullName: string,
+    Region: number,
+    State: string,
+    Login: string,
+    Permission: 'user' | 'author' | 'inspector' | 'admin',
+    Department?: string,
+    Position?: number,
+    hasSign?: any,
+    Course: number
 }
 
 
