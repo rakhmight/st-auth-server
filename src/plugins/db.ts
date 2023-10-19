@@ -42,7 +42,7 @@ const ConnectDB: FastifyPluginAsync<MyPluginOptions> = async (
         const models: Models = { User, Student, Teacher, Employee, Enrollee, Device };
         fastify.decorate('db', { models });
     } catch (error) {
-        console.error(error);
+        fastify.log.fatal({ actor: 'MongoDB' }, (error as Error).message);
     }
 };
 export const dbPlugin = fp(ConnectDB);

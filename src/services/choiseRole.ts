@@ -3,8 +3,9 @@ import { Enrollee, EnrolleeI } from "../models/enrollee";
 import { Teacher } from "../models/teacher";
 import { Employee } from "../models/employee";
 import { UserRolePropertiesI } from "../routes/@types/user";
+import { FastifyRequest } from "fastify";
 
-export default async function (id:String, role:String, properties:UserRolePropertiesI):Promise<void | EnrolleeI >{
+export default async function (id:String, role:String, properties:UserRolePropertiesI, req:FastifyRequest):Promise<void | EnrolleeI >{
     if(role=='student'){
         await Student.create({
             _id: id,
@@ -13,10 +14,10 @@ export default async function (id:String, role:String, properties:UserRoleProper
             recieptDate: properties.recieptDate
         })
         .then(()=>{
-            console.log(`[Auth-api] New student ${id} added`);
+            req.log.info({ actor: 'Service' }, `New student ${id} added`);
         })
-        .catch(err=>{
-            console.log(`[Auth-api] Error while adding student: ${err}`);
+        .catch(error => {
+            req.log.fatal({ actor: 'Service' }, `Error while adding student: ${(error as Error).message}`);
         })
     }else if(role=='enrollee'){
         const enrollee = await Enrollee.create({
@@ -26,10 +27,10 @@ export default async function (id:String, role:String, properties:UserRoleProper
             admissionYear: properties.admissionYear
         })
         .then(()=>{
-            console.log(`[Auth-api] New enrollee ${id} added`);
+            req.log.info({ actor: 'Service' }, `New enrollee ${id} added`);
         })
-        .catch(err=>{
-            console.log(`[Auth-api] Error while adding enrollee: ${err}`);
+        .catch(error => {
+            req.log.fatal({ actor: 'Service' }, `Error while adding enrollee: ${(error as Error).message}`);
         })
 
         return enrollee
@@ -40,10 +41,10 @@ export default async function (id:String, role:String, properties:UserRoleProper
             position: properties.position
         })
         .then(()=>{
-            console.log(`[Auth-api] New teacher ${id} added`);
+            req.log.info({ actor: 'Service' }, `New teacher ${id} added`);
         })
-        .catch(err=>{
-            console.log(`[Auth-api] Error while adding teacher: ${err}`);
+        .catch(error => {
+            req.log.fatal({ actor: 'Service' }, `Error while adding teacher: ${(error as Error).message}`);
         })
     }else if(role=='employee'){
         await Employee.create({
@@ -52,10 +53,10 @@ export default async function (id:String, role:String, properties:UserRoleProper
             position: properties.position
         })
         .then(()=>{
-            console.log(`[Auth-api] New employee ${id} added`);
+            req.log.info({ actor: 'Service' }, `New employee ${id} added`);
         })
-        .catch(err=>{
-            console.log(`[Auth-api] Error while adding employee: ${err}`);
+        .catch(error => {
+            req.log.fatal({ actor: 'Service' }, `Error while adding employee: ${(error as Error).message}`);
         })
     }
 }

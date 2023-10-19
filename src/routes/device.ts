@@ -34,11 +34,11 @@ const DeviceRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options
                 code: deviceData.code
             })
     
-            req.log.info(`[ST-Auth] User ${req.body.auth.id} registered new device`)
+            req.log.info({ actor: 'Route: devices' }, `User ${req.body.auth.id} registered new device`);
             return rep.code(200).send({statusCode: 200, data: { ok: true, device: newDevice._id }})
 
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: devices' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })

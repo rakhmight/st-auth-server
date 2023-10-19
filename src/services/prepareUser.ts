@@ -5,6 +5,7 @@ import afs from 'fs/promises'
 import path from 'path'
 import genToken from "../utils/genToken";
 import makeReq from "../utils/makeReq";
+import { FastifyRequest } from "fastify";
 
 interface UserI {
     Role: 'student' | 'enrollee' | 'teacher' | 'employee',
@@ -20,15 +21,13 @@ interface UserI {
     Group?: number,
     Form?: string
 }
-export default async function prepareUser(user:UserI, reqData: { id:String, token: String }):Promise<{ preparedUser: UserFromStore, avatar: any, userData:any, sign:any }>{
+export default async function prepareUser(user:UserI, reqData: { id:String, token: String }, req: FastifyRequest):Promise<{ preparedUser: UserFromStore, avatar: any, userData:any, sign:any }>{
 
     const fullName = user.FullName.split(' ')
 
     const login = `${Date.now()}${genToken(6)}`
-    console.log(login);
-    
-    // Проверки
 
+    // Проверки
     const permission = user.Permission === 'admin' ? 3 : user.Permission === 'inspector' ? 2 : user.Permission === 'author' ? 1 : 0
 
     let roleProperties = {}
@@ -88,7 +87,7 @@ export default async function prepareUser(user:UserI, reqData: { id:String, toke
 
     const avatar = await afs.copyFile(path.join(__dirname, '..', 'storage', 'avatars', 'default', `default_avatar.png`), path.join(__dirname, '..', 'storage', 'avatars', `${newUser._id}.png`))
     
-    const userData = await choiseRole(newUser._id, newUser.userRole, roleProperties)
+    const userData = await choiseRole(newUser._id, newUser.userRole, roleProperties, req)
 
     // Sign
     const sign:Boolean | Object = user.hasSign || user.Role === 'teacher' ? await makeReq(`${process.env.ST_ADMIN_SERVER_IP}/api/signs/create`, "POST", {

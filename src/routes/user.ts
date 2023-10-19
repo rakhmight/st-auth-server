@@ -44,20 +44,18 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                 const tokenRefreshProcess:RefreshUserTokenOutputI = await refreshUserToken(user, userData.password)
 
                 if(tokenRefreshProcess.error.value && tokenRefreshProcess.error.msg == 'password'){
-
-                    req.log.info(`[ST-Auth] User with login ${userData.login} entered the wrong password`);
+                    req.log.error({ actor: 'Route: users' }, `User with login ${userData.login} entered the wrong password`);
                     return rep.code(404).send({statusCode: 404, message: 'User not found'});
                 } else if(!tokenRefreshProcess.error.value) {
-                    
-                    req.log.info(`[ST-Auth] User ${user._id} (${user.bio.lastName} ${user.bio.firstName}) is authorized`);
+                    req.log.info({ actor: 'Route: users' }, `User ${user._id} (${user.bio.lastName} ${user.bio.firstName}) is authorized`);
                     return rep.code(200).send({statusCode: 200, data: { ...tokenRefreshProcess.data }});
                 }
             } else {
-                req.log.info(`[ST-Auth] User with login ${userData.login} not found`);
+                req.log.error({ actor: 'Route: users' }, `User with login ${userData.login} not found`);
                 return rep.code(404).send({statusCode: 404, message: 'User not found'});
             }
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -72,20 +70,18 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                 const tokenRefreshProcess:RefreshUserTokenOutputI = await refreshUserToken(user, userData.password)
 
                 if(tokenRefreshProcess.error.value && tokenRefreshProcess.error.msg == 'password'){
-
-                    req.log.info(`[ST-Auth] User with id ${userData.id} entered the wrong password`);
+                    req.log.error({ actor: 'Route: users' }, `User with id ${userData.id} entered the wrong password`);
                     return rep.code(404).send({statusCode: 404, message: 'User not found'});
                 } else if(!tokenRefreshProcess.error.value) {
-                    
-                    req.log.info(`[ST-Auth] User ${user._id} (${user.bio.lastName} ${user.bio.firstName}) is authorized`);
+                    req.log.info({ actor: 'Route: users' }, `User ${user._id} (${user.bio.lastName} ${user.bio.firstName}) is authorized`);
                     return rep.code(200).send({statusCode: 200, data: { ...tokenRefreshProcess.data }});
                 }
             } else {
-                req.log.info(`[ST-Auth] User with id ${userData.id} not found`);
+                req.log.error({ actor: 'Route: users' }, `User with id ${userData.id} not found`);
                 return rep.code(404).send({statusCode: 404, message: 'User not found'});
             }
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -93,13 +89,13 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
     fastify.post<{Body: BaseReqI}>('/api/user/check', {preHandler: [checkToken, checkDevice]}, async (req, rep) => { // for checking auth state & permission
         try {
             if(!req.body.deviceData){
-                req.log.info(`[ST-Auth] User with id ${req.body.auth.id} (${req.user.userData.bio.lastName} ${req.user.userData.bio.firstName}) successefully authorized`)
+                req.log.info({ actor: 'Route: users' }, `User with id ${req.body.auth.id} (${req.user.userData.bio.lastName} ${req.user.userData.bio.firstName}) successefully authorized`);
             } else {
-                req.log.info(`[ST-Auth] Device with id ${req.body.deviceData.id} successefully identified`)
+                req.log.info({ actor: 'Route: users' }, `Device with id ${req.body.deviceData.id} successefully identified`);
             }
             return rep.code(200).send({statusCode: 200, data:{ ...req.user }})
         } catch (error) {
-            req.log.error(error);
+            req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
             return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -113,10 +109,10 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                   key: undefined
             }})
 
-            req.log.info(`[ST-Auth] User ${req.body.auth.id} logged out`)
+            req.log.info({ actor: 'Route: users' }, `User ${req.body.auth.id} logged out`);
             return rep.code(200).send({statusCode: 200, data: { ok: true, updateCount: updateOperation.modifiedCount }})
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -130,16 +126,16 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                 const isPasswordValid = await user.comparePasswords(user.auth.password!, userData.password)
 
                 if(isPasswordValid){
-                    req.log.info(`[ST-Auth] User ${userData.checkedID} (${user.bio.lastName} ${user.bio.firstName}) password is valid`)
+                    req.log.error({ actor: 'Route: users' }, `User ${userData.checkedID} (${user.bio.lastName} ${user.bio.firstName}) password is valid`);
                     return rep.code(200).send({statusCode: 200, data:{ ok: true, user: { ...req.user } }})
                 } else {
-                    req.log.info(`[ST-Auth] User ${userData.checkedID} (${user.bio.lastName} ${user.bio.firstName}) password is invalid`)
+                    req.log.error({ actor: 'Route: users' }, `User ${userData.checkedID} (${user.bio.lastName} ${user.bio.firstName}) password is invalid`);
                     return rep.code(403).send({statusCode: 403, message: 'Password is invalid'})
                 }
             }
 
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -187,7 +183,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                             if(err) throw err
                         });
                     } catch (error) {
-                        console.log(`[Auth-api] Failed to write user avatar to local storage: ${error}`)
+                        req.log.fatal({ actor: 'Route: users' }, `Failed to write user avatar to local storage: ${(error as Error).message}`);
                     }
                 } else {
                     try {
@@ -195,7 +191,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                             if(err) throw err
                         });
                     } catch (error) {
-                        console.log(`[Auth-api] Failed to write user avatar to local storage: ${error}`)
+                        req.log.fatal({ actor: 'Route: users' }, `Failed to write user avatar to local storage: ${(error as Error).message}`);
                     }
                 }
                 const sign:Boolean | Object = userData.createSign ? await makeReq(`${process.env.ST_ADMIN_SERVER_IP}/api/signs/create`, "POST", {
@@ -208,7 +204,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                     }
                 }) : false
                 
-                await choiseRole(newUser._id, newUser.userRole, userData.roleProperties)
+                await choiseRole(newUser._id, newUser.userRole, userData.roleProperties, req)
     
                 const userToStore:UserFromStore = {
                     id: newUser._id,
@@ -236,24 +232,24 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
                         try {
                             fs.writeFile(path.join(__dirname, '..', 'storage', 'users', 'users.json'), JSON.stringify(usersStore), function (error) {
                                 if (error) throw error;
-                                console.log('[Auth-api] The data is saved in the users local storage');
+                                req.log.info({ actor: 'Route: users' }, 'The data is saved in the users local storage');
     
                             });
                         } catch (error) {
-                            console.log(`[Auth-api] Failed to write user to local storage: ${error}`);
+                            req.log.fatal({ actor: 'Route: users' }, `Failed to write user to local storage: ${(error as Error).message}`);
                         }
                     })
                 } catch (error) {
-                    console.log(`[Auth-api] Failed to read users local storage: ${error}`)
+                    req.log.fatal({ actor: 'Route: users' }, `Failed to read users local storage: ${(error as Error).message}`);
                 }
 
-                req.log.info(`[Auth-api] New user added. Login: ${newUser.auth.login}`)
+                req.log.info({ actor: 'Route: users' }, `New user added. Login: ${newUser.auth.login}`);
                 return rep.code(200).send({statusCode: 200, data:{ user: userToStore, sign }})
             }
             
 
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -267,7 +263,7 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
 
             const usersToStore:Array<UserFromStore> = await Promise.all(
                 usersList.map(async user=>{
-                const { preparedUser } = await prepareUser(user, { id: req.body.auth.id, token: req.body.auth.token})
+                const { preparedUser } = await prepareUser(user, { id: req.body.auth.id, token: req.body.auth.token}, req)
 
                 return preparedUser
             }))
@@ -286,11 +282,11 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
             const writeNewUsers = await afs.writeFile(path.join(__dirname, '..', 'storage', 'users', 'users.json'), JSON.stringify(usersFromStoreArray))
             .catch(error => { throw error })            
             
-            req.log.info(`[Auth-api] Multiple users adding`)
+            req.log.info({ actor: 'Route: users' }, 'Multiple users adding');
             return rep.code(200).send({statusCode: 200, data:{ users: usersToStore, writeNewUsers }})
 
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -301,13 +297,13 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
             const usersList = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'storage', 'users', 'users.json'),{encoding:'utf8', flag:'r'}))
             
             if(req.body.auth.requesting=='client'){
-                req.log.info(`[ST-Auth] User ${req.body.auth.id} get users list`)
+                req.log.info({ actor: 'Route: users' }, `User ${req.body.auth.id} get users list`);
             } else if(req.body.auth.requesting=='device'){
-                req.log.info(`[ST-Auth] Device ${req.body.data.device?.id} get users list`)
+                req.log.info({ actor: 'Route: users' }, `Device ${req.body.data.device?.id} get users list`);
             }
             return rep.code(200).send({statusCode: 200, data: { usersList }})
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -321,14 +317,14 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
             const user:UserFromStore | undefined = users.find(u => u.id == userData.id)
 
             if(user){
-                req.log.info(`[ST-Auth] User ${req.body.auth.id} get user data with id ${userData.id}`)
+                req.log.info({ actor: 'Route: users' }, `User ${req.body.auth.id} get user data with id ${userData.id}`);
                 return rep.code(200).send({statusCode: 200, data: { user }})
             } else {
-                req.log.info(`[ST-Auth] User ${req.body.auth.id} tried to get an unknown user`)
+                req.log.error({ actor: 'Route: users' }, `User ${req.body.auth.id} tried to get an unknown user`);
                 return rep.code(404).send({statusCode: 400, message: 'User not found'})
             }
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
@@ -337,11 +333,11 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
         try {
             const usersList = await Teacher.find({ department: req.body.data.department })
 
-            req.log.info(`[ST-Auth] User ${req.body.auth.id} get user from ${req.body.data.department} department`)
+            req.log.info({ actor: 'Route: users' }, `User ${req.body.auth.id} get user from ${req.body.data.department} department`);
             return rep.code(200).send({statusCode: 200, data: { usersList }})
         
         } catch (error) {
-          req.log.error(error);
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
