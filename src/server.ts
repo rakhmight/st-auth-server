@@ -13,12 +13,12 @@ const app = build(fastifyConfig);
             app.log.info({ actor: 'ST-Auth' }, 'Server started successfully')
         })
     } catch (error) {
-      app.log.error({ actor: 'ST-Auth' }, (error as Error).message);
+      app.log.fatal({ actor: 'ST-Auth' }, (error as Error).message);
         process.exit(1);
     }
 })()
 
 function hostError(){
-  app.log.error({ actor: 'ST-Auth' }, 'Unable to get ip address of host');
+  app.log.fatal({ actor: 'ST-Auth' }, 'Unable to get ip address of host');
     process.exit(1);
 }

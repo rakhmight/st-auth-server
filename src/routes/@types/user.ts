@@ -106,10 +106,12 @@ export interface RefreshUserTokenOutputI {
         userData: {
             bio: UserBioI,
             userRole: String,
-            permission: Number
+            permission: Number,
+            roleProperties: UserRolePropertiesI | null
         },
         authData: {
             id: String,
+            login: String,
             token: {
                 key: String,
                 date: Number
