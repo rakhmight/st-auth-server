@@ -5,6 +5,16 @@ export interface AddUserReqI extends BaseReqI {
     data: AddUserDataI
 }
 
+export interface EditUserReqI extends BaseReqI {
+    data: {
+        userID: string,
+        firstName: string,
+        lastName: string,
+        patronymic: string,
+        password: undefined | string
+    }
+}
+
 export interface AddUserDataI {
         bio: UserBioI,
         auth: {

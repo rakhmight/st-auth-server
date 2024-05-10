@@ -6,7 +6,7 @@ import {
 import fp from 'fastify-plugin';
 import { Db } from '../plugins/db';
 import checkToken from '../middleware/checkToken';
-import { AddUserDataI, AddUserReqI, AddUsersReqI, AuthReqI, CheckedUserCtxI, FindUsersByDepReqI, GetUserReqI, GetUsersReqI, PwdCompareReqI, RefreshUserTokenOutputI, SigninReqI, UserFromStore } from './@types/user';
+import { AddUserDataI, AddUserReqI, AddUsersReqI, AuthReqI, CheckedUserCtxI, EditUserReqI, FindUsersByDepReqI, GetUserReqI, GetUsersReqI, PwdCompareReqI, RefreshUserTokenOutputI, SigninReqI, UserFromStore } from './@types/user';
 import { User } from '../models/user'
 import fs from 'fs'
 import path from 'path'
@@ -19,7 +19,7 @@ import { Teacher } from '../models/teacher';
 import makeReq from '../utils/makeReq';
 import prepareUser from '../services/prepareUser';
 import afs from 'fs/promises'
-import { request } from 'http';
+import bcrypt from 'bcrypt'
 
 // Declaration merging
 declare module 'fastify' {
@@ -253,6 +253,72 @@ const UserRoute: FastifyPluginAsync = async (fastify: FastifyInstance, options: 
           return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
         }
     })
+
+    fastify.post<{Body: EditUserReqI}>('/api/user/edit-user', {preHandler: [checkToken, checkIsAdmin]}, async (req, rep) => {
+        try {
+
+            const userData = req.body.data
+
+            // users.json
+            const usersFile = await afs.readFile(path.join(__dirname, '..', 'storage', 'users', 'users.json'))
+            .catch(error => { throw error })
+
+            if (usersFile) {
+                const usersFromStore:Array<UserFromStore> = JSON.parse(usersFile.toString())
+                const userFromLS = usersFromStore.find(user => user.id == userData.userID)
+
+                if(userFromLS){
+                    const index = usersFromStore.indexOf(userFromLS)
+                    usersFromStore[index].bio.firstName = userData.firstName
+                    usersFromStore[index].bio.lastName = userData.lastName
+                    usersFromStore[index].bio.patronymic = userData.patronymic
+                }
+                
+                const writeNewUsers = await afs.writeFile(path.join(__dirname, '..', 'storage', 'users', 'users.json'), JSON.stringify(usersFromStore))
+                .catch(error => { throw error })
+
+                const updateOperation = await User.updateOne(
+                    {
+                        '_id': userData.userID
+                    },
+                    { $set: {
+                        'bio.firstName': userData.firstName,
+                        'bio.lastName': userData.lastName,
+                        'bio.patronymic': userData.patronymic
+                    }}
+                )
+                
+                if(userData.password){
+                    const password = await bcrypt.hash(userData.password, 12)
+                    const updatePassword = await User.updateOne(
+                        {
+                            '_id': userData.userID
+                        },
+                        { $set: {
+                            'auth.login': userData.password,
+                            'auth.password': password
+                            }
+                        }
+                    )
+
+
+                    req.log.info({ actor: 'Route: users' }, `ID ${userData.userID} user's data is updated`);
+                    return rep.code(200).send({statusCode: 200, data:{ updatePassword, updateOperation, writeNewUsers }})
+                } else{
+                    req.log.info({ actor: 'Route: users' }, `ID ${userData.userID} user's data is updated`);
+                    return rep.code(200).send({statusCode: 200, data:{ updateOperation, writeNewUsers }})
+                }
+            } else {
+                req.log.fatal({ actor: 'Route: users' }, 'User not found');
+                return rep.code(404).send({statusCode: 404, message: 'User not found'});
+            }
+
+        } catch (error) {
+          req.log.fatal({ actor: 'Route: users' }, (error as Error).message);
+          return rep.code(400).send({statusCode: 400, message: 'Bad Request'});
+        }
+    })
+
 
     //! ======================================== !
     fastify.post<{Body: AddUsersReqI}>('/api/user/multipleadd', {preHandler: [checkToken, checkIsAdmin]}, async (req, rep) => {

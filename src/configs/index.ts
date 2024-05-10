@@ -8,7 +8,7 @@ const transport = pino.transport({
     {
       target: 'pino/file',
       options: {
-        destination: path.join(__dirname, `../logs/logs-${getSysDate()}.log`),
+        destination: path.join(__dirname, `../logs/auth-logs-${getSysDate()}.log`),
       }
     },
     {
