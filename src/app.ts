@@ -1,3 +1,5 @@
+import { FastifyInstance } from "fastify";
+
 // modules
 const path = require('path')
 require('dotenv').config({path: path.join(__dirname, `../.env`)})
@@ -17,6 +19,7 @@ const dbUrl = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@127.0
 
 export const build = (opts = {}) => {
     const app = fastify(opts)
+    checkServerEnv(app)
 
     app.register(require('@fastify/cors'), corsParams)
     app.register(dbPlugin, { url: dbUrl })
@@ -33,3 +36,20 @@ export const build = (opts = {}) => {
 
   return app;
 };
+
+function checkServerEnv(app:FastifyInstance){
+    if(!process.env.SERVER_PORT){
+        app.log.fatal('The environment variable responsible for the server port is not set')
+        process.exit(1)
+    }
+    
+    if(!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME){
+        app.log.fatal('The environment variable responsible for connecting to the MongoDB database is not set')
+        process.exit(1)
+    }
+  
+    if(!process.env.ST_ADMIN_SERVER_IP){
+        app.log.fatal('The environment variable responsible for cooperation with st-admin-server is not set')
+        process.exit(1)
+    }
+}
